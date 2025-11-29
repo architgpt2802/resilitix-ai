@@ -1,0 +1,5 @@
+streamlit
+google-cloud-aiplatform>=1.71.0
+requests
+protobuf
+google-auth
