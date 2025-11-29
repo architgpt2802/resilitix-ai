@@ -5,6 +5,7 @@ import requests
 import json
 import google.auth.transport.requests
 import google.oauth2.id_token
+import os
 
 # --- CONFIGURATION ---
 PROJECT_ID = "resiliencegenomeai"
@@ -29,6 +30,39 @@ def get_id_token(url):
     auth_req = google.auth.transport.requests.Request()
     return google.oauth2.id_token.fetch_id_token(auth_req, url)
 
+# --- HELPER: LOAD CONFIGURATION ---
+def load_config():
+    """
+    Reads instructions.md and examples.json to build the system prompt.
+    """
+    # 1. Load Rules from instructions.md
+    try:
+        # We look in the local config folder
+        config_path = os.path.join(os.path.dirname(__file__), "config", "instructions.md")
+        with open(config_path, "r") as f:
+            base_instructions = f.read()
+    except FileNotFoundError:
+        # Fallback if file is missing
+        base_instructions = """
+        Role: You are an expert Data Analyst for Resilitix. 
+        You answer user questions by querying the BigQuery dataset data_library.
+        """
+
+    # 2. Load Examples from examples.json
+    try:
+        examples_path = os.path.join(os.path.dirname(__file__), "config", "examples.json")
+        with open(examples_path, "r") as f:
+            examples_data = json.load(f)
+            
+        examples_text = "\n\n### Few-Shot Examples:\n"
+        for ex in examples_data:
+            examples_text += f"User: {ex['question']}\nSQL: {ex['sql']}\n\n"
+            
+    except FileNotFoundError:
+        examples_text = ""
+
+    # Combine them
+    return base_instructions + examples_text
 
 # --- 1. DEFINE THE TOOL FUNCTION ---
 def query_bigquery(query: str) -> dict:
@@ -68,10 +102,6 @@ def query_bigquery(query: str) -> dict:
     except Exception as e:
         return {"error": f"Connection Exception: {str(e)}"}
 
-
-
-
-
 # --- 2. INITIALIZE SESSION STATE ---
 if "chat_session" not in st.session_state:
     
@@ -95,18 +125,13 @@ if "chat_session" not in st.session_state:
         function_declarations=[sql_func]
     )
     
+    # --- NEW: LOAD CONFIGURATION ---
+    full_system_instruction = load_config()
+
     # Initialize the Model (Gemini 2.5 Flash)
     model = GenerativeModel(
         "gemini-2.5-flash",
-        system_instruction="""
-        Role: You are an expert Data Analyst for Resilitix. You answer user questions by querying the BigQuery dataset data_library.
-        Tools: You have one tool: query_bigquery. You must use this tool to retrieve data.
-        Workflow:
-        1. Understand the Request.
-        2. Check Schema (First Time Only): If you don't know the table names, run SELECT table_name FROM data_library.INFORMATION_SCHEMA.TABLES.
-        3. Formulate SQL: Always use data_library.[table_name] and hex_id for spatial queries.
-        4. Execute and Answer.
-        """,
+        system_instruction=full_system_instruction, # <--- Updated to use loaded config
         tools=[bq_tool],
     )
     st.session_state.chat_session = model.start_chat()

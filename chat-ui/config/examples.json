@@ -1,0 +1,10 @@
+[
+  {
+    "question": "How many tables are in the database?",
+    "sql": "SELECT count(*) FROM data_library.INFORMATION_SCHEMA.TABLES"
+  },
+  {
+    "question": "which area has the most number of hospitals?",
+    "sql": "SELECT hex_id, hifld_health_hospitals_n FROM data_library.HIFLD-HEALTH-HOSP-N ORDER BY hifld_health_hospitals_n DESC LIMIT 1"
+  }
+]
