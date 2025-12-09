@@ -3,3 +3,7 @@ google-cloud-aiplatform>=1.71.0
 requests
 protobuf
 google-auth
+vertexai
+google-auth-oauthlib
+google-auth-httplib2
+google-cloud-discoveryengine
