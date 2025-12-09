@@ -215,13 +215,12 @@ LOCATION = "us-central1"
 # Your Cloud Run Tool URL (for SQL execution)
 TOOL_URL = "https://resilitix-sql-tool-525917099044.us-central1.run.app"
 
-# RAG CONFIGURATION (MUST BE UPDATED)
-# Replace this placeholder with the Data Store ID from your RAG setup
+# RAG CONFIGURATION (UPDATED WITH YOUR ID)
 RAG_DATA_STORE_ID = "resilitix-rag-data_1765252053186" 
 
 # Page Config
 st.set_page_config(page_title="Resilitix AI", page_icon="⚡", layout="wide")
-st.title("⚡ Resilitix Data and Knowledge Assistant")
+st.title("EmergenCITY AI")
 
 # Initialize Vertex AI
 if "vertex_init" not in st.session_state:
@@ -308,16 +307,16 @@ def search_knowledge_base(query: str) -> dict:
     """
     Searches the internal knowledge base and extracts the summary text directly from the API response.
     """
-    if RAG_DATA_STORE_ID == "YOUR_RAG_DATA_STORE_ID_HERE":
-        return {"error": "RAG_DATA_STORE_ID has not been configured in app.py. Please update the configuration section."}
-        
     print(f"DEBUG: Tool (RAG) called with: {query}")
     
     try:
-        client = discoveryengine.SearchServiceClient()
+        # FIX: Explicitly set the client options to ensure the correct global endpoint is targeted
+        client_options = {"api_endpoint": "discoveryengine.googleapis.com"}
+        client = discoveryengine.SearchServiceClient(client_options=client_options)
+
         serving_config = client.serving_config_path(
             project=PROJECT_ID,
-            location=LOCATION,
+            location="global", 
             data_store=RAG_DATA_STORE_ID,
             serving_config="default_search",
         )
@@ -350,7 +349,8 @@ def search_knowledge_base(query: str) -> dict:
         return {"found": True, "documents": [{"summary_text": summary_text}]}
 
     except Exception as e:
-        # Note: Discovery Engine clients are sensitive to environment; print error for debug
+        # Return the error message directly to the model so it can be relayed to the user
+        print(f"RAG Search Exception Detail: {e}")
         return {"error": f"RAG Search Exception: {str(e)}"}
 
 
