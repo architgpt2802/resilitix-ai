@@ -168,7 +168,7 @@ def run_cli_chat():
                     
                     # --- RAW DATA INSPECTION FOR MAPS ---
                     print("\n" + "="*40)
-                    print("📊 RAW DATA RETURNED FROM BIGQUERY (For Map Logic):")
+                    print("📊 RAW DATA RETURNED FROM BIGQUERY:")
                     # Pretty print the JSON so you can see the table structure
                     print(json.dumps(tool_result, indent=2))
                     print("="*40 + "\n")
