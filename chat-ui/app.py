@@ -1,204 +1,3 @@
-# import streamlit as st
-# import vertexai
-# from vertexai.generative_models import GenerativeModel, Tool, Part, Content, ChatSession, FunctionDeclaration
-# import requests
-# import json
-# import google.auth.transport.requests
-# import google.oauth2.id_token
-# import os
-
-# # --- CONFIGURATION ---
-# PROJECT_ID = "resiliencegenomeai"
-# LOCATION = "us-central1"
-# # Your Cloud Run Tool URL
-# TOOL_URL = "https://resilitix-sql-tool-525917099044.us-central1.run.app"
-
-# # Page Config
-# st.set_page_config(page_title="Resilitix AI", page_icon="⚡", layout="wide")
-# st.title("⚡ Resilitix Data Assistant")
-
-# # Initialize Vertex AI
-# if "vertex_init" not in st.session_state:
-#     vertexai.init(project=PROJECT_ID, location=LOCATION)
-#     st.session_state.vertex_init = True
-
-# # --- HELPER: GET AUTH TOKEN ---
-# def get_id_token(url):
-#     """
-#     Generates a Google ID Token to authenticate with the Cloud Run tool.
-#     """
-#     auth_req = google.auth.transport.requests.Request()
-#     return google.oauth2.id_token.fetch_id_token(auth_req, url)
-
-# # --- HELPER: LOAD CONFIGURATION ---
-# def load_config():
-#     """
-#     Reads instructions.md and examples.json to build the system prompt.
-#     """
-#     # 1. Load Rules from instructions.md
-#     try:
-#         # We look in the local config folder
-#         config_path = os.path.join(os.path.dirname(__file__), "config", "instructions.md")
-#         with open(config_path, "r") as f:
-#             base_instructions = f.read()
-#     except FileNotFoundError:
-#         # Fallback if file is missing
-#         base_instructions = """
-#         Role: You are an expert Data Analyst for Resilitix. 
-#         You answer user questions by querying the BigQuery dataset data_library.
-#         """
-
-#     # 2. Load Examples from examples.json
-#     try:
-#         examples_path = os.path.join(os.path.dirname(__file__), "config", "examples.json")
-#         with open(examples_path, "r") as f:
-#             examples_data = json.load(f)
-            
-#         examples_text = "\n\n### Few-Shot Examples:\n"
-#         for ex in examples_data:
-#             examples_text += f"User: {ex['question']}\nSQL: {ex['sql']}\n\n"
-            
-#     except FileNotFoundError:
-#         examples_text = ""
-
-#     # Combine them
-#     return base_instructions + examples_text
-
-# # --- 1. DEFINE THE TOOL FUNCTION ---
-# def query_bigquery(query: str) -> dict:
-#     """
-#     Executes a Standard SQL query against the Resilitix BigQuery dataset.
-#     """
-#     print(f"DEBUG: Tool called with: {query}")
-#     payload = json.dumps({"query": query})
-    
-#     try:
-#         # 1. Get Token
-#         try:
-#             token = get_id_token(TOOL_URL)
-#         except Exception as e:
-#             return {"error": f"Token Generation Failed: {str(e)}"}
-
-#         headers = {
-#             'Content-Type': 'application/json',
-#             'Authorization': f'Bearer {token}'
-#         }
-        
-#         # 2. Send Request
-#         response = requests.post(TOOL_URL, data=payload, headers=headers)
-        
-#         # 3. DEBUGGING: Check for non-200 status immediately
-#         if response.status_code != 200:
-#             # Return the RAW TEXT so we can see the HTML error message
-#             return {"error": f"HTTP {response.status_code} Error. Raw response: {response.text}"}
-            
-#         # 4. Parse JSON
-#         try:
-#             return response.json()
-#         except json.JSONDecodeError:
-#             # If it's 200 OK but not JSON, show what it is
-#             return {"error": f"Invalid JSON received. Raw content: {response.text}"}
-
-#     except Exception as e:
-#         return {"error": f"Connection Exception: {str(e)}"}
-
-# # --- 2. INITIALIZE SESSION STATE ---
-# if "chat_session" not in st.session_state:
-    
-#     # --- BULLETPROOF TOOL DEFINITION ---
-#     sql_func = FunctionDeclaration(
-#         name="query_bigquery",
-#         description="Executes a Standard SQL query against the Resilitix BigQuery dataset.",
-#         parameters={
-#             "type": "object",
-#             "properties": {
-#                 "query": {
-#                     "type": "string",
-#                     "description": "The Standard SQL query to execute. Must begin with SELECT."
-#                 }
-#             },
-#             "required": ["query"]
-#         }
-#     )
-    
-#     bq_tool = Tool(
-#         function_declarations=[sql_func]
-#     )
-    
-#     # --- NEW: LOAD CONFIGURATION ---
-#     full_system_instruction = load_config()
-
-#     # Initialize the Model (Gemini 2.5 Flash)
-#     model = GenerativeModel(
-#         "gemini-2.5-flash",
-#         system_instruction=full_system_instruction, # <--- Updated to use loaded config
-#         tools=[bq_tool],
-#     )
-#     st.session_state.chat_session = model.start_chat()
-#     st.session_state.messages = []
-
-# # --- 3. CHAT INTERFACE ---
-
-# # Display Chat History
-# for message in st.session_state.messages:
-#     with st.chat_message(message["role"]):
-#         st.markdown(message["content"])
-
-# # Input Handling
-# if prompt := st.chat_input("Ask about wildfire risk, population, or tables..."):
-#     # 1. Display User Message
-#     st.session_state.messages.append({"role": "user", "content": prompt})
-#     with st.chat_message("user"):
-#         st.markdown(prompt)
-
-#     # 2. Generate Response (The Loop)
-#     with st.chat_message("assistant"):
-#         with st.spinner("Thinking..."):
-#             try:
-#                 # Send message to model
-#                 response = st.session_state.chat_session.send_message(prompt)
-                
-#                 # --- MANUAL TOOL LOOP ---
-#                 for _ in range(5):
-#                     try:
-#                         part = response.candidates[0].content.parts[0]
-#                     except:
-#                         break
-
-#                     if not part.function_call:
-#                         break # It's text, we are done
-
-#                     # It IS a function call
-#                     func_name = part.function_call.name
-#                     args = part.function_call.args
-                    
-#                     if func_name == "query_bigquery":
-#                         sql_q = args.get("query", "")
-#                         st.caption(f"🛠️ Running SQL: `{sql_q}`") 
-                        
-#                         # Execute Tool (Now Authenticated!)
-#                         tool_result = query_bigquery(sql_q)
-                        
-#                         # Send Result back to Model
-#                         response = st.session_state.chat_session.send_message(
-#                             Part.from_function_response(
-#                                 name="query_bigquery",
-#                                 response={"content": tool_result}
-#                             )
-#                         )
-                
-#                 # Display Final Text
-#                 final_text = response.text
-#                 st.markdown(final_text)
-#                 st.session_state.messages.append({"role": "assistant", "content": final_text})
-                
-#             except Exception as e:
-#                 st.error(f"Error: {e}")
-
-
-
-
-
 import streamlit as st
 import vertexai
 from vertexai.generative_models import GenerativeModel, Tool, Part, Content, ChatSession, FunctionDeclaration
@@ -208,6 +7,9 @@ import google.auth.transport.requests
 import google.oauth2.id_token
 import os
 from google.cloud import discoveryengine_v1 as discoveryengine
+from keplergl import KeplerGl
+import streamlit.components.v1 as components
+import pandas as pd
 
 # --- CONFIGURATION ---
 PROJECT_ID = "resiliencegenomeai"
@@ -220,12 +22,16 @@ RAG_DATA_STORE_ID = "resilitix-rag-data_1765252053186"
 
 # Page Config
 st.set_page_config(page_title="Resilitix AI", page_icon="⚡", layout="wide")
-st.title("EmergenCITY AI")
 
 # Initialize Vertex AI
 if "vertex_init" not in st.session_state:
     vertexai.init(project=PROJECT_ID, location=LOCATION)
     st.session_state.vertex_init = True
+
+if "map_data" not in st.session_state:
+    st.session_state.map_data = None
+if "map_config" not in st.session_state:
+    st.session_state.map_config = {}
 
 # --- HELPER: GET AUTH TOKEN ---
 def get_id_token(url):
@@ -269,7 +75,8 @@ def load_config():
     ## Tool Usage Rules:
     1. **For questions requiring quantitative data, statistics, or metrics (e.g., 'What is the average...', 'Show me the count...', 'List the top 5...'):** Use the `query_bigquery` tool.
     2. **For questions requiring information from documents, reports, or the knowledge base (e.g., 'What is AAT?', 'When was the study conducted?', 'What are the conclusions of the report?'):** Use the `search_knowledge_base` tool.
-    3. You must choose only ONE tool per turn.
+    3. **For geospatial visualization**, use `plot_kepler_map`. The SQL MUST return columns 'hex_id' (string) and 'value' (numeric, optional):** Use the `plot_kepler_map` tool.
+    4. You must choose only ONE tool per turn.
     """
     
     return base_instructions + orchestration_instruction + examples_text
@@ -353,6 +160,46 @@ def search_knowledge_base(query: str) -> dict:
         print(f"RAG Search Exception Detail: {e}")
         return {"error": f"RAG Search Exception: {str(e)}"}
 
+def plot_kepler_map(query: str) -> dict:
+    """
+    Queries BigQuery to retrieve geospatial data (hexID and value) 
+    and returns the data as a list of dictionaries, suitable for KeplerGL.
+    """
+    print(f"\n[DEBUG] Generating SQL for KeplerGL data: {query}")
+    
+    bigquery_result = query_bigquery(query)
+
+    if "error" in bigquery_result:
+        return {"error": f"Error retrieving data for map: {bigquery_result['error']}"}
+
+    raw_data = bigquery_result.get("data", [])
+    
+    if not raw_data:
+        return {"error": "Query executed successfully but returned 0 records."}
+
+    # 2. Process Data for Kepler
+    try:
+        # Convert list of dicts to Pandas DataFrame
+        df = pd.DataFrame(raw_data)
+        
+        # Validation: Ensure hex_id exists for mapping
+        if 'hex_id' not in df.columns:
+             # Try to find a column that looks like a hex_id if named differently
+            return {"error": "The SQL result must contain a column named 'hex_id' for the map to render."}
+
+        # 3. Update Session State
+        # This stores the dataframe so the UI column can render it on the next run
+        st.session_state.map_data = df
+        
+        # 4. Return Success Message to LLM
+        return {
+            "status": "success",
+            "rows_retrieved": len(df),
+            "message": "Data successfully loaded into the dashboard map. Tell the user the map has been updated."
+        }
+        
+    except Exception as e:
+        return {"error": f"Data processing error: {str(e)}"}
 
 # --- 2. INITIALIZE SESSION STATE & TOOLS ---
 if "chat_session" not in st.session_state:
@@ -388,16 +235,29 @@ if "chat_session" not in st.session_state:
             "required": ["query"]
         }
     )
-    
-    # Combine both tools
-    combined_tools = Tool(
-        function_declarations=[sql_func, rag_func]
+
+    # --- TOOL 3: PLOT Definition ---
+    plot_func = FunctionDeclaration(
+        name="plot_kepler_map",
+        description="Retrieves geospatial data for plotting on a Kepler GL map. The LLM must ensure the SQL output contains a 'hex_id' column and a numeric 'value' column.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The Standard SQL query to execute. Must begin with SELECT."
+                }
+            },
+            "required": ["query"]
+        }
     )
     
-    # --- NEW: LOAD CONFIGURATION ---
+    combined_tools = Tool(
+        function_declarations=[sql_func, rag_func, plot_func]
+    )
+    
     full_system_instruction = load_config()
 
-    # Initialize the Model with both tools
     model = GenerativeModel(
         "gemini-2.5-flash",
         system_instruction=full_system_instruction, 
@@ -406,69 +266,95 @@ if "chat_session" not in st.session_state:
     st.session_state.chat_session = model.start_chat()
     st.session_state.messages = []
 
-# --- 3. CHAT INTERFACE ---
+# --- LAYOUT DEFINITION ---
+col1, col2, col3 = st.columns([3, 0.5, 6.5])
 
-# Display Chat History
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# --- RIGHT COLUMN: MAP RENDERER ---
+with col3:
+    try:
+        if st.session_state.map_data is not None:
+            map_ = KeplerGl(height=750, data={"resilience_layer": st.session_state.map_data})
+        else:
+            # Empty Default Map
+            map_ = KeplerGl()
+            
+        html_map = map_._repr_html_(center_map=True)
+        components.html(html_map, height=750)
+    except Exception as e:
+        st.error(f"Error rendering map: {e}")
 
-# Input Handling
-if prompt := st.chat_input("Ask about data trends or document facts..."):
-    # 1. Display User Message
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
 
-    # 2. Generate Response (The Tool Loop)
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            try:
-                # Send message to model
-                response = st.session_state.chat_session.send_message(prompt)
-                
-                # --- MANUAL TOOL LOOP & ORCHESTRATOR ---
-                for _ in range(5):
-                    try:
+# --- LEFT COLUMN: CHAT INTERFACE ---
+with col1:
+    st.title("EmergenCITY AI")
+    # Display History
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Input Handling
+    if prompt := st.chat_input():
+        
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    # Send to Vertex AI
+                    response = st.session_state.chat_session.send_message(prompt)
+                    
+                    should_rerun = False # Flag to trigger UI update
+
+                    # --- TOOL ORCHESTRATOR LOOP ---
+                    # We loop to handle potential multiple tool calls or chained reasoning
+                    while response.candidates[0].content.parts[0].function_call:
+                        
                         part = response.candidates[0].content.parts[0]
-                    except:
-                        break
+                        func_name = part.function_call.name
+                        args = part.function_call.args
+                        
+                        tool_result = None
 
-                    if not part.function_call:
-                        break # It's text, we are done
+                        if func_name == "query_bigquery":
+                            sql_q = args.get("query", "")
+                            st.caption(f"🛠️ SQL: `{sql_q}`") 
+                            tool_result = query_bigquery(sql_q)
+                        
+                        elif func_name == "search_knowledge_base":
+                            rag_q = args.get("query", "")
+                            st.caption(f"📚 RAG: `{rag_q}`")
+                            tool_result = search_knowledge_base(rag_q)
+                        
+                        elif func_name == "plot_kepler_map":
+                            plot_q = args.get("query", "")
+                            st.caption(f"🗺️ Plotting: `{plot_q}`")
+                            tool_result = plot_kepler_map(plot_q)
+                            
+                            # CRITICAL: If plotting succeeded, we must rerun to update the Right Column
+                            if "status" in tool_result and tool_result["status"] == "success":
+                                should_rerun = True
 
-                    # It IS a function call
-                    func_name = part.function_call.name
-                    args = part.function_call.args
-                    
-                    tool_result = None
+                        else:
+                            tool_result = {"error": f"Unknown function: {func_name}"}
 
-                    # --- ORCHESTRATOR DISPATCH ---
-                    if func_name == "query_bigquery":
-                        sql_q = args.get("query", "")
-                        st.caption(f"🛠️ Running SQL: `{sql_q}`") 
-                        tool_result = query_bigquery(sql_q)
-                    
-                    elif func_name == "search_knowledge_base":
-                        rag_q = args.get("query", "")
-                        st.caption(f"📚 Searching Knowledge Base for: `{rag_q}`")
-                        tool_result = search_knowledge_base(rag_q)
-                    
-                    else:
-                        tool_result = {"error": f"Unknown function requested: {func_name}"}
-
-                    # Send Result back to Model
-                    response = st.session_state.chat_session.send_message(
-                        Part.from_function_response(
-                            name=func_name,
-                            response={"content": tool_result}
+                        # Send Tool Response back to Gemini
+                        response = st.session_state.chat_session.send_message(
+                            Part.from_function_response(
+                                name=func_name,
+                                response={"content": tool_result}
+                            )
                         )
-                    )
-                
-                # Display Final Text
-                final_text = response.text
-                st.markdown(final_text)
-                st.session_state.messages.append({"role": "assistant", "content": final_text})
-                
-            except Exception as e:
-                st.error(f"Error: {e}")
+
+                    # Display Final Text
+                    final_text = response.text
+                    st.markdown(final_text)
+                    st.session_state.messages.append({"role": "assistant", "content": final_text})
+
+                    # Trigger the map update if needed
+                    if should_rerun:
+                        st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"Error: {e}")
