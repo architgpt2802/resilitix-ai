@@ -72,11 +72,12 @@ def load_config():
 
     # 3. Add Orchestration and RAG-Specific Instructions
     orchestration_instruction = """
-    ## Tool Usage Rules:
-    1. **For questions requiring quantitative data, statistics, or metrics (e.g., 'What is the average...', 'Show me the count...', 'List the top 5...'):** Use the `query_bigquery` tool.
-    2. **For questions requiring information from documents, reports, or the knowledge base (e.g., 'What is AAT?', 'When was the study conducted?', 'What are the conclusions of the report?'):** Use the `search_knowledge_base` tool.
-    3. **For geospatial visualization**, use `plot_kepler_map`. The SQL MUST return columns 'hex_id' (string) and 'value' (numeric, optional):** Use the `plot_kepler_map` tool.
-    4. You must choose only ONE tool per turn.
+    Tool Usage Rules:
+    1. For questions requiring quantitative data, statistics, or metrics: Use the `query_bigquery` tool.
+    2. For questions requiring information from documents, reports, or the knowledge base:** Use the `search_knowledge_base` tool.
+    3. For geospatial visualization, use `plot_kepler_map`. The SQL MUST return columns 'hex_id' (string) and optional 'value' column (numeric, optional):** Use the `plot_kepler_map` tool.
+    4. You should first think the plan through regarding which tool are you going to call first, and then downstream tool calls.
+    For example: If asked to plot states which were affected by a specific disaster, you can choose to go to knowledgebase to look for the states or answer from you own knowledge, and then go to ploting tool to plot those regions.
     """
     
     return base_instructions + orchestration_instruction + examples_text
