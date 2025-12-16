@@ -31,7 +31,13 @@ if "vertex_init" not in st.session_state:
 if "map_data" not in st.session_state:
     st.session_state.map_data = None
 if "map_config" not in st.session_state:
-    st.session_state.map_config = {}
+    # st.session_state.map_config = {}
+    st.session_state.map_config = {
+    'uiState': {
+        'activeSidePanel': None,
+        'readOnly': True
+    }
+}
 
 # --- HELPER: GET AUTH TOKEN ---
 def get_id_token(url):
