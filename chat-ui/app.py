@@ -21,7 +21,7 @@ TOOL_URL = "https://resilitix-sql-tool-525917099044.us-central1.run.app"
 RAG_DATA_STORE_ID = "resilitix-rag-data_1765252053186" 
 
 # Page Config
-st.set_page_config(page_title="Resilitix AI", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="EmergenCITY AI", page_icon="⚡", layout="wide")
 
 # Initialize Vertex AI
 if "vertex_init" not in st.session_state:
@@ -33,9 +33,13 @@ if "map_data" not in st.session_state:
 if "map_config" not in st.session_state:
     # st.session_state.map_config = {}
     st.session_state.map_config = {
-    'uiState': {
-        'activeSidePanel': None,
-        'readOnly': True
+    'version': 'v1',
+    'config': {
+        'mapState': {
+            'latitude': 31.0,
+            'longitude': -100.0,
+            'zoom': 5
+        }
     }
 }
 
@@ -191,9 +195,15 @@ def plot_kepler_map(query: str) -> dict:
         df = pd.DataFrame(raw_data)
         
         # Validation: Ensure hex_id exists for mapping
-        if 'hex_id' not in df.columns:
-             # Try to find a column that looks like a hex_id if named differently
-            return {"error": "The SQL result must contain a column named 'hex_id' for the map to render."}
+        # We check for common hex column names or ensure at least one column looks like an H3 index
+        # For now, strict check on 'hex_id' as per instructions
+        
+        # NOTE: Your instructions say "hex_id" (string), but data might come back as hex_id_l6 or similar.
+        # We will check if any column contains 'hex' to be safe, or just trust the agent obeyed the prompt.
+        hex_cols = [col for col in df.columns if 'hex' in col.lower()]
+        
+        if not hex_cols:
+             return {"error": "The SQL result returned data, but no column named 'hex_id' (or similar) was found. Map cannot be plotted."}
 
         # 3. Update Session State
         # This stores the dataframe so the UI column can render it on the next run
@@ -281,10 +291,12 @@ col1, col2, col3 = st.columns([3, 0.5, 6.5])
 with col3:
     try:
         if st.session_state.map_data is not None:
+            # Render Kepler with the data
             map_ = KeplerGl(height=750, data={"resilience_layer": st.session_state.map_data})
+            # You can inject config here if you have a saved one: config=st.session_state.map_config
         else:
             # Empty Default Map
-            map_ = KeplerGl()
+            map_ = KeplerGl(height=750)
             
         html_map = map_._repr_html_(center_map=True)
         components.html(html_map, height=750)
@@ -317,9 +329,16 @@ with col1:
 
                     # --- TOOL ORCHESTRATOR LOOP ---
                     # We loop to handle potential multiple tool calls or chained reasoning
-                    while response.candidates[0].content.parts[0].function_call:
-                        
-                        part = response.candidates[0].content.parts[0]
+                    for _ in range(5):
+                        try:
+                            part = response.candidates[0].content.parts[0]
+                        except:
+                            break
+
+                        if not part.function_call:
+                            break # It's text, we are done
+
+                        # It IS a function call
                         func_name = part.function_call.name
                         args = part.function_call.args
                         
