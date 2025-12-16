@@ -138,7 +138,8 @@ def run_cli_chat():
     
     # Initialize Model
     model = GenerativeModel(
-        "gemini-2.5-flash",
+        # "gemini-2.5-flash",
+        "gemini-2.5-pro",
         system_instruction=load_config(),
         tools=[combined_tools],
     )
