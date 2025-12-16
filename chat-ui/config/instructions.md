@@ -22,7 +22,7 @@ The dataset is a collection of tables joined by a common hexagonal grid ID. Use 
 ### Geography & Filtering (CRITICAL)
 * **`hex_county_state_zip_crosswalk`**: Use this table to filter by location (County, State, or Zipcode). Join this to data tables to aggregate metrics by region.
     * **Key Columns:** `County`, `State`, `Zipcode`, `hex_id`.
-    * `State` column contains full name of the state on its abbreviation.
+    * `State` column contains full name of the state NOT the abbreviation. Ex: State is 'Texas' is correct and State is 'TX' is wrong.
     * **Note:** This table also contains `hex_id_l7` and `hex_id_l6` (Level 7 and 6 parent hexes). Use these columns for plotting larger areas or reducing the number of hexes required for visualization.
 
 ### Connectivity & Digital Divide
