@@ -267,7 +267,7 @@ if "chat_session" not in st.session_state:
     full_system_instruction = load_config()
 
     model = GenerativeModel(
-        "gemini-2.5-pro",
+        "gemini-2.5-flash",
         system_instruction=full_system_instruction, 
         tools=[combined_tools],
     )
