@@ -76,7 +76,8 @@ def load_config():
     1. For questions requiring quantitative data, statistics, or metrics: Use the `query_bigquery` tool.
     2. For questions requiring information from documents, reports, or the knowledge base:** Use the `search_knowledge_base` tool.
     3. For geospatial visualization, use `plot_kepler_map`. The SQL MUST return columns 'hex_id' (string) and optional 'value' column (numeric, optional):** Use the `plot_kepler_map` tool.
-    4. You should first think the plan through regarding which tool are you going to call first, and then downstream tool calls.
+    4. Important: While plotting the map, always return hex ids at level 6 (hex_id_l6) unless asked otherwise, along with the columns County, State, and Zipcode columns.
+    5. You should first think the plan through regarding which tool are you going to call first, and then downstream tool calls.
     For example: If asked to plot states which were affected by a specific disaster, you can choose to go to knowledgebase to look for the states or answer from you own knowledge, and then go to ploting tool to plot those regions.
     """
     
