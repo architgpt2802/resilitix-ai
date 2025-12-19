@@ -4,7 +4,27 @@
     "sql": "SELECT count(*) FROM data_library.INFORMATION_SCHEMA.TABLES"
   },
   {
-    "question": "which area has the most number of hospitals?",
-    "sql": "SELECT hex_id, hifld_health_hospitals_n FROM data_library.HIFLD-HEALTH-HOSP-N ORDER BY hifld_health_hospitals_n DESC LIMIT 1"
+    "question": "Which hex has the most hospitals in Harris County?",
+    "sql": "SELECT t1.hex_id, t2.hifld_health_hospitals_n FROM data_library.hex_county_state_zip_crosswalk AS t1 JOIN data_library.HIFLD-HEALTH-HOSP-N AS t2 ON t1.hex_id = t2.hex_id WHERE UPPER(t1.County) LIKE 'HARRIS%' AND t1.State = 'Texas' ORDER BY t2.hifld_health_hospitals_n DESC LIMIT 1"
+  },
+  {
+    "question": "What is the total population living in high flood risk zones (FloodGenome level 4 or higher) in Zip Code 77002?",
+    "sql": "SELECT SUM(t3.population_per_hex) FROM data_library.hex_county_state_zip_crosswalk AS t1 JOIN data_library.HP_FLD_003 AS t2 ON t1.hex_id = t2.hex_id JOIN data_library.EX_POP_001 AS t3 ON t1.hex_id = t3.hex_id WHERE t1.Zipcode = '77002' AND t2.floodgenome >= 4"
+  },
+  {
+    "question": "List the top 5 hexes with the highest social vulnerability in Dallas County.",
+    "sql": "SELECT t1.hex_id, t2.sovi FROM data_library.hex_county_state_zip_crosswalk AS t1 JOIN data_library.VUL_002 AS t2 ON t1.hex_id = t2.hex_id WHERE UPPER(t1.County) LIKE 'DALLAS%' AND t1.State = 'Texas' ORDER BY t2.sovi DESC LIMIT 5"
+  },
+  {
+    "question": "What is the average fixed broadband download speed for hexes in Texas?",
+    "sql": "SELECT AVG(t2.ookla_fixed_dl_median_mbps) FROM data_library.hex_county_state_zip_crosswalk AS t1 JOIN data_library.OOKLA-FIX-DL AS t2 ON t1.hex_id = t2.hex_id WHERE t1.State = 'Texas'"
+  },
+  {
+    "question": "Count the number of power substations in areas with high wildfire risk (Expected Annual Loss > 5000) in California.",
+    "sql": "SELECT SUM(t3.hifld_energy_substations_n) FROM data_library.hex_county_state_zip_crosswalk AS t1 JOIN data_library.VUL_003 AS t2 ON t1.hex_id = t2.hex_id JOIN data_library.HIFLD-ENERGY-SUBSTN-N AS t3 ON t1.hex_id = t3.hex_id WHERE t1.State = 'California' AND t2.nri_eal_WFIR > 5000"
+  },
+  {
+    "question": "Show me the critical road segments (Index > 0.8) in Harris County that also have low broadband adoption (less than 50%).",
+    "sql": "SELECT t1.hex_id, t2.road_crit_index, t3.msft_brdband_pct FROM data_library.hex_county_state_zip_crosswalk AS t1 JOIN data_library.TRANS-ROAD-CRIT-INDEX AS t2 ON t1.hex_id = t2.hex_id JOIN data_library.MSFT_BRDBAND AS t3 ON t1.hex_id = t3.hex_id WHERE UPPER(t1.County) LIKE 'HARRIS%' AND t2.road_crit_index > 0.8 AND t3.msft_brdband_pct < 0.5 LIMIT 20"
   }
 ]

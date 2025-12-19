@@ -251,7 +251,7 @@ def agent_mapping(user_query: str) -> Dict[str, Any]:
     Previous Data Context: {context_str}
     
     1. Analyze the user query and the context to generate a NEW SQL query.
-    2. The query MUST include a column named 'hex_id' (H3 Index at level 6) and a numeric column named 'value'.
+    2. The query MUST include a column named 'hex_id' from the hex_county_state_zip_crosswalk table with column name 'hex_id_l6'(H3 Index at level 6) and a numeric column named 'value'.
     3. Execute the query using `run_map_sql`.
     4. Return the exact JSON output. Do NOT summarize or chat.
     """
