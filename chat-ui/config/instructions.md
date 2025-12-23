@@ -110,29 +110,49 @@ The dataset is a collection of tables joined by a common hexagonal grid ID. Use 
 ### Critical Lifelines & Facilities
 * **Emergency Operations:**
     * **`HIFLD-EMERGENC-STATE_EOC-N`**: State EOCs.
+    * *Key Columns:* `hifld_state_emergency_operations_centers_n`
     * **`HIFLD-EMERGENC-LOCAL_EOC-N`**: Local EOCs.
+    * *Key Columns:* `hifld_local_emergency_operations_center_local_eoc_n`
     * **`HIFLD-EMERGENC-EMERGENCY_OP`**: Total EOC count.
+    * *Key Columns:* `hifld_emergency_services_emergency_operations_n`
     * **`HIFLD-EMERGENC-FEMA_REGIONS-N`**: FEMA Regional Offices.
+    * *Key Columns:* `hifld_federal_emergency_management_agency_regional_offices_n`
 * **Shelter & Response:**
     * **`HIFLD-EMERGENC-SHELTER-N`**: National Shelter System facilities.
+    * *Key Columns:* `hifld_national_shelter_system_facilities_shelter_locations_n`
     * **`HIFLD-EMERGENC-FIRE_EMS-N`**: Combined Fire and EMS stations.
+    * *Key Columns:* `hifld_fire_and_emergency_medical_service_stations_fire_stations_ems_stations_n`
     * **`HIFLD-EMS-FIRE-N`**: Fire stations only.
+    * *Key Columns:* `hifld_ems_fire_stations_n`
     * **`HIFLD-EMERGENC-LOCAL_LAW-N`**: Local law enforcement.
+    * *Key Columns:* `hifld_local_law_enforcement_n`
 * **Medical & Care:**
     * **`HIFLD-HEALTH-HOSP-N`**: Hospital facility count.
+    * *Key Columns:* `hifld_health_hospitals_n`
     * **`HIFLD-HEALTH-DIALYSIS-N`**: Dialysis centers.
+    * *Key Columns:* `hifld_dialysis_centers_n`
     * **`HIFLD-EMERGENC-DEPENDENT_CA`**: Dependent care proxy facilities (nursing homes, childcare).
+    * *Key Columns:* `hifld_emergency_services_dependent_care_proxy`
     * **`EX_LIFE_004`**: Hospitals per 100k residents (Capacity).
+    * *Key Columns:* `hospital_per100k`
     * **`EX_LIFE_002`**: Pharmacies per 10k residents (Access).
+    * *Key Columns:* `pharm_per10k`
 * **Food, Water & Fuel Access:**
     * **`HIFLD-WATER-WTP-N`**: Water treatment plants.
+    * *Key Columns:* `hifld_water_wtp_n`
     * **`EX_LIFE_001`**: Grocery stores per 1k residents (Food Access).
+    * *Key Columns:* `groc_per1k`
     * **`EX_LIFE_003`**: Fuel stations per 10k residents (Fuel Access).
+    * *Key Columns:* `fuel_per10k`
 * **Criticality Indices (Dependencies):**
     * **`CRIT_LIFE_001`**: RAC-based functional criticality (Grocery/Hospital).
-    * **`CRIT_LIFE_002`**: Single-point dependency (Max facility importance).
-    * **`CRIT_LIFE_003`**: Concentration index (Redundancy).
-    * **`CRIT_LIFE_004`**: Top 3 facility dependence.
+    * *Key Columns:* `hex_fc_rac_hospital`, `hex_fc_rac_grocery`
+    * **`CRIT_LIFE_002`**: Single-point dependency (Max facility importance) (Grocery/Hospital).
+    * *Key Columns:* `hex_fc_max_grocery`, `hex_fc_max_hospital`
+    * **`CRIT_LIFE_003`**: Concentration index (Redundancy) (Grocery/Hospital).
+    * *Key Columns:* `conc_index_grocery`, `conc_index_hospital`
+    * **`CRIT_LIFE_004`**: Top 3 facility dependence (Grocery/Hospital).
+    * *Key Columns:* `hex_fc_top3_grocery`, `hex_fc_top3_hospital`
 
 ---
 
@@ -145,5 +165,5 @@ The dataset is a collection of tables joined by a common hexagonal grid ID. Use 
 3.  **Project Prefix:** Always use `data_library.[table_name]`.
     * *Example:* `SELECT * FROM data_library.OOKLA-FIX-DL`
 4.  **Handling NULLs:** Many infrastructure counts (like `hifld_energy_plants_n`) are `0` or `NULL` for most hexes. Treat `NULL` as `0` in aggregations unless specified otherwise.
-5.  **Limits:** Always add `LIMIT 20` to queries returning raw rows. Do not limit aggregation queries (COUNT, AVG, SUM).
-6.  **Visualizations:** If the user asks for a map or plot, select `hex_id_l6` or `hex_id_l7` from the crosswalk table to aggregate data to a coarser resolution for better performance.
+5.  **Limits:** Always add `LIMIT 20` to queries returning raw rows unless specified otherwise. Do not limit aggregation queries (COUNT, AVG, SUM).
+6.  **Visualizations:** If the user asks for a map or plot, select `hex_id_l6` from the crosswalk table to aggregate data to a coarser resolution for better performance.
