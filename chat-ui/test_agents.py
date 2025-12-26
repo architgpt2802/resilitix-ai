@@ -125,6 +125,8 @@ def agent_text_to_sql(user_query: str) -> Dict[str, Any]:
     2. Use the `run_sql` tool to execute it.
     3. If the query fails, analyze the error and try again.
     4. Return the exact JSON output from the `run_sql` tool call.
+    5. Strictly adhere to the table names and column names quoted in the instructions file. Do NOT assume name of the table.
+    Do NOT hallucinate between `_` and `-` in the table names.
     """
 
     model = GenerativeModel("gemini-2.5-flash", system_instruction=system_prompt, tools=[sql_tool])
@@ -136,7 +138,8 @@ def agent_text_to_sql(user_query: str) -> Dict[str, Any]:
     
     # --- RETRY LOOP FOR SQL AGENT ---
     # We loop up to 5 times to allow the model to fix bad SQL or refine results
-    for _ in range(5):
+    # for _ in range(5):
+    while True:
         try:
             # Check if we have a response content
             if not response.candidates:
@@ -324,7 +327,9 @@ def orchestrator_dispatch(user_prompt: str) -> str:
     )
     
     chat = model.start_chat()
+    # print("Orchestrator: Chat session created")
     response = chat.send_message(user_prompt)
+    # print("Response received, maybe")
     final_response = "I'm not sure how to handle that request."
     
     try:
